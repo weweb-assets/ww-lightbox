@@ -23,20 +23,11 @@
           </div>
         </div>
       </div>
-      <div class="ww-lightbox__content-summary" v-if="!isExplorerVisible">
-        <div class="summary-item">
-          <wwElement
-            v-bind="content.miniatureElement"
-            :wwProps="{ url: content.medias[contentIndex].miniature }"
-          />
-        </div>
-      </div>
     </div>
     <div class="ww-lightbox__explorer" v-show="isExplorerVisible && !isEditing">
       <div class="close-button" @click="handlerExplorer" explorer-navigation>
         <wwElement v-bind="content.closeIcon" />
       </div>
-      <!-- TODO fix transition -->
       <div class="ww-lightbox__explorer-content">
         <TransitionGroup :name="activeTransition" mode="out-in">
           <template v-for="(element, index) in explorerContent">
@@ -56,16 +47,33 @@
     <div v-show="showNext" class="explorer-nav -next" @click="explorerNext">
       <wwElement v-bind="content.explorerArrows[1]" />
     </div>
-    <div class="ww-lightbox__summary" v-if="isExplorerVisible">
+    <div
+      class="ww-lightbox__summary"
+      v-if="!isEditing && isExplorerVisible && groupMiniatures.length > 1"
+    >
       <div
         class="summary-item"
-        v-for="(item, index) in content.miniaturesUrl"
+        v-for="(miniature, index) in groupMiniatures"
         :key="index"
         @click="changeIndex(index)"
       >
         <wwElement
           v-bind="content.miniatureElement"
-          :wwProps="{ url: item.miniature }"
+          :wwProps="{ url: miniature.url }"
+        />
+      </div>
+    </div>
+    <div
+      class="ww-lightbox__summary"
+      v-else-if="isEditing && isExplorerVisible"
+    >
+      <div class="summary-item">
+        <wwElement
+          v-if="
+            groupMiniatures[contentIndex] && groupMiniatures[contentIndex].url
+          "
+          v-bind="content.miniatureElement"
+          :wwProps="{ url: groupMiniatures[contentIndex].url }"
         />
       </div>
     </div>
@@ -73,6 +81,10 @@
 </template>
 
 <script>
+import { reactive, watch, computed, onUnmounted } from "vue";
+
+const GROUPS_MINIATURES = reactive({});
+
 export default {
   props: {
     content: { type: Object, required: true },
@@ -81,10 +93,58 @@ export default {
     wwEditorState: { type: Object, required: true },
     /* wwEditor:end */
   },
+  setup(props) {
+    const id = `ww-lightbox-${wwLib.wwUtils.getUniqueId()}`;
+    const group = computed(() => props.content.group);
+    const linked = computed(() => props.content.linked);
+    const miniatures = computed(() => {
+      return props.content.medias
+        .filter((item) => item && "miniature" in item)
+        .map((item) => ({
+          lightboxId: id,
+          url: item.miniature,
+          linked,
+        }));
+    });
+    const groupMiniatures = computed(() => {
+      return group.value
+        ? Object.values(GROUPS_MINIATURES[group.value]).flat()
+        : miniatures.value;
+    });
+
+    watch(
+      group,
+      (newGroup, oldGroup) => {
+        if (
+          !!oldGroup &&
+          GROUPS_MINIATURES[oldGroup] &&
+          id in GROUPS_MINIATURES[oldGroup]
+        ) {
+          delete GROUPS_MINIATURES[oldGroup][id];
+        }
+        if (newGroup) {
+          GROUPS_MINIATURES[newGroup] = GROUPS_MINIATURES[newGroup] || {};
+          GROUPS_MINIATURES[newGroup][id] = miniatures;
+        }
+      },
+      { immediate: true }
+    );
+
+    onUnmounted(() => {
+      if (
+        !!group.value &&
+        GROUPS_MINIATURES[group.value] &&
+        GROUPS_MINIATURES[group.value].hasOwnProperty(id)
+      ) {
+        delete GROUPS_MINIATURES[group.value][id];
+      }
+    });
+
+    return { id, groupMiniatures, linked };
+  },
   data() {
     return {
       isExplorerVisible: false,
-      observer: null,
       lightboxIndex: 0,
       contentIndex: 0,
       explorerContent: [],
@@ -117,21 +177,16 @@ export default {
               mediaElements[index] = elem;
               this.$emit("update:content", { mediaElements });
             }
-
-            // TODO All element need to share the same object
-            // if (media.miniature !== oldMedias[index].miniature) {
-            //   const url = await wwLib.wwUtils.transformToTwicPics(
-            //     newMedias[index].miniature || ""
-            //   );
-            //   wwLib.$emit("ww-lightbox-update:miniatures", this.id, url);
-            // }
           }
         });
       },
     },
+    "content.linked"() {
+      this.$emit("update:content", { group: "" });
+    },
     "wwEditorState.sidepanelContent.mediaIndex"(index) {
       this.isExplorerVisible = true;
-      this.lightboxIndex = index;
+      this.contentIndex = index;
     },
   },
   computed: {
@@ -144,9 +199,6 @@ export default {
       // eslint-disable-next-line no-unreachable
       return false;
     },
-    id() {
-      return `ww-lightbox-${wwLib.wwUtils.getUniqueId()}`;
-    },
     showPrev() {
       return !!this.explorerContent[this.lightboxIndex - 1];
     },
@@ -157,6 +209,15 @@ export default {
       return {
         "--backdrop-color": this.content.backdropColor,
       };
+    },
+    filteredMiniatures() {
+      if (!this.linked) {
+        return this.groupMiniatures.filter(
+          (item) => item.lightboxId === this.id
+        );
+      }
+
+      return this.groupMiniatures;
     },
   },
   methods: {
@@ -169,34 +230,44 @@ export default {
       });
     },
     handleLightboxes() {
-      const lightboxes = wwLib
-        .getFrontDocument()
-        .querySelectorAll("[data-lightbox-media]");
+      let lightboxes;
 
-      // TODO Get the element position in the list
-      // const list = Array.prototype.slice.call(lightboxes);
-      // const indexInList = list.indexOf(
-      //   list.find((el) => el.getAttribute("data-lightbox-id") === this.id)
-      // );
+      if (this.linked) {
+        lightboxes = wwLib
+          .getFrontDocument()
+          .querySelectorAll("[data-lightbox-media]");
+      } else {
+        const nodeList = wwLib
+          .getFrontDocument()
+          .querySelectorAll("[data-lightbox-media]");
 
-      // console.log(indexInList);
+        lightboxes = Array.from(nodeList).filter(
+          (el) => el.getAttribute("data-lightbox-id") === this.id
+        );
+      }
+
+      const list = Array.from(lightboxes);
+      const indexInList = Array.prototype.indexOf.call(
+        lightboxes,
+        list.find((el) => el.getAttribute("data-lightbox-id") === this.id)
+      );
+
+      this.lightboxIndex = indexInList;
 
       this.destroyExplorer();
 
       for (let node of lightboxes) {
-        const nodeId = node.getAttribute("data-lightbox-id");
-        const nodeGroup = node.getAttribute("data-lightbox-group");
-        const linked = node.getAttribute("data-lightbox-linked");
+        const group = node.getAttribute("data-lightbox-group");
+        const id = node.getAttribute("data-lightbox-id");
 
-        if (!linked) continue;
-        if (!this.content.group.length && nodeGroup !== this.content.group)
-          continue;
-        if (nodeId === this.id) continue;
+        if (!group.length && this.id !== id) return;
 
         const clone = node.cloneNode(true);
         clone.removeAttribute("data-lightbox-media");
         this.explorerContent.push(clone);
       }
+
+      console.log("explorerContent", this.explorerContent);
     },
     destroyExplorer() {
       this.explorerContent = [];
@@ -205,10 +276,7 @@ export default {
       const mediaElements = [...this.content.mediaElements];
       mediaElements.splice(index, 1);
 
-      const miniaturesUrl = [...this.content.miniaturesUrl];
-      miniaturesUrl.splice(index, 1);
-
-      this.$emit("update:content", { mediaElements, miniaturesUrl });
+      this.$emit("update:content", { mediaElements });
     },
     async onMediaAdded() {
       const mediaElements = [...this.content.mediaElements];
@@ -244,22 +312,9 @@ export default {
         this.changeIndex(this.lightboxIndex + 1);
       }
     },
-    updateMiniatures(id, url) {
-      console.log(this.content.miniaturesUrl);
-      const miniaturesUrl = { ...this.content.miniaturesUrl };
-      miniaturesUrl[id] = { miniature: url };
-      this.$emit("update:content", { miniaturesUrl });
-      console.log(this.content.miniaturesUrl);
-    },
-  },
-  beforeUnmount() {
-    wwLib.$off("ww-lightbox-update:miniatures", this.updateMiniatures);
   },
   mounted() {
     this.handleLightboxes();
-  },
-  created() {
-    wwLib.$on("ww-lightbox-update:miniatures", this.updateMiniatures);
   },
 };
 </script>

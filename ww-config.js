@@ -93,10 +93,6 @@ export default {
       },
       defaultValue: [{ media: "ww-image" }],
     },
-    miniaturesUrl: {
-      defaultValue: {},
-      hidden: true,
-    },
     mediaIndex: {
       label: { en: "Media index", fr: "Media index" },
       type: "Tabs",
