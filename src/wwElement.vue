@@ -80,9 +80,7 @@
 </template>
 
 <script>
-import { reactive, watch, computed, onUnmounted } from "vue";
-
-const GROUPS_MINIATURES = reactive({});
+import useMiniatures from "./useMiniatures";
 
 export default {
   props: {
@@ -93,51 +91,9 @@ export default {
     /* wwEditor:end */
   },
   setup(props) {
-    const id = `ww-lightbox-${wwLib.wwUtils.getUniqueId()}`;
-    const group = computed(() => props.content.group);
-    const linked = computed(() => props.content.linked);
-    const miniatures = computed(() => {
-      return props.content.medias
-        .filter((item) => item && "miniature" in item)
-        .map((item) => ({
-          lightboxId: id,
-          url: item.miniature,
-          linked,
-        }));
-    });
-    const groupMiniatures = computed(() => {
-      return group.value
-        ? Object.values(GROUPS_MINIATURES[group.value]).flat()
-        : miniatures.value;
-    });
+    const { id, groupMiniatures, linked } = useMiniatures(props);
 
-    watch(
-      group,
-      (newGroup, oldGroup) => {
-        if (
-          !!oldGroup &&
-          GROUPS_MINIATURES[oldGroup] &&
-          id in GROUPS_MINIATURES[oldGroup]
-        ) {
-          delete GROUPS_MINIATURES[oldGroup][id];
-        }
-        if (newGroup) {
-          GROUPS_MINIATURES[newGroup] = GROUPS_MINIATURES[newGroup] || {};
-          GROUPS_MINIATURES[newGroup][id] = miniatures;
-        }
-      },
-      { immediate: true }
-    );
-
-    onUnmounted(() => {
-      if (
-        !!group.value &&
-        GROUPS_MINIATURES[group.value] &&
-        GROUPS_MINIATURES[group.value].hasOwnProperty(id)
-      ) {
-        delete GROUPS_MINIATURES[group.value][id];
-      }
-    });
+    console.log(id, groupMiniatures, linked);
 
     return { id, groupMiniatures, linked };
   },
@@ -191,34 +147,22 @@ export default {
       this.contentIndex = index;
     },
     isExplorerVisible(val) {
-      if (!this.isEditing && val) {
-        this.$nextTick(() => {
-          console.log(this.$refs);
-          const summary = this.$refs.lightboxSummary;
-          // console.log(summary);
-          summary.addEventListener("mousedown", (e) => {
-            this.isDown = true;
-            summary.classList.add("active");
-            this.startX = e.pageX - summary.offsetLeft;
-            this.scrollLeft = summary.scrollLeft;
-          });
-          summary.addEventListener("mouseleave", () => {
-            this.isDown = false;
-            summary.classList.remove("active");
-          });
-          summary.addEventListener("mouseup", () => {
-            this.isDown = false;
-            summary.classList.remove("active");
-          });
-          summary.addEventListener("mousemove", (e) => {
-            if (!this.isDown) return;
-            e.preventDefault();
-            const x = e.pageX - summary.offsetLeft;
-            const walk = (x - this.startX) * 2;
-            summary.scrollLeft = this.scrollLeft - walk;
-          });
-        });
-      }
+      this.$nextTick(() => {
+        const summary = this.$refs.lightboxSummary;
+        if (!summary) return;
+
+        if (!this.isEditing && val) {
+          summary.addEventListener("mousedown", this.onMouseDown);
+          summary.addEventListener("mouseleave", this.onMouseLeave);
+          summary.addEventListener("mouseup", this.onMouseUp);
+          summary.addEventListener("mousemove", this.onMouseMove);
+        } else if (!val) {
+          summary.removeEventListener("mousedown", this.onMouseDown);
+          summary.removeEventListener("mouseleave", this.onMouseLeave);
+          summary.removeEventListener("mouseup", this.onMouseUp);
+          summary.removeEventListener("mousemove", this.onMouseMove);
+        }
+      });
     },
   },
   computed: {
@@ -343,6 +287,48 @@ export default {
         this.changeIndex(this.lightboxIndex + 1);
       }
     },
+    onMouseDown(event) {
+      const summary = this.$refs.lightboxSummary;
+      if (!summary) return;
+
+      this.isDown = true;
+      summary.classList.add("active");
+      this.startX = event.pageX - summary.offsetLeft;
+      this.scrollLeft = summary.scrollLeft;
+    },
+    onMouseLeave(event) {
+      const summary = this.$refs.lightboxSummary;
+      if (!summary) return;
+
+      this.isDown = false;
+      summary.classList.remove("active");
+    },
+    onMouseUp(event) {
+      const summary = this.$refs.lightboxSummary;
+      if (!summary) return;
+
+      this.isDown = false;
+      summary.classList.remove("active");
+    },
+    onMouseMove(event) {
+      if (!this.isDown) return;
+      const summary = this.$refs.lightboxSummary;
+      if (!summary) return;
+
+      event.preventDefault();
+      const x = event.pageX - summary.offsetLeft;
+      const walk = (x - this.startX) * 2;
+      summary.scrollLeft = this.scrollLeft - walk;
+    },
+  },
+  beforeUnmount() {
+    const summary = this.$refs.lightboxSummary;
+    if (!summary) return;
+
+    summary.removeEventListener("mousedown", this.onMouseDown);
+    summary.removeEventListener("mouseleave", this.onMouseLeave);
+    summary.removeEventListener("mouseup", this.onMouseUp);
+    summary.removeEventListener("mousemove", this.onMouseMove);
   },
   mounted() {
     this.handleLightboxes();
@@ -355,11 +341,6 @@ export default {
   // Layout : display flex column
 
   position: inherit;
-
-  &__trigger {
-    // padding: 10px;
-    // border: 10px solid lightcoral;
-  }
 
   &__explorer {
     z-index: 3;
