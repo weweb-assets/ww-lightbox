@@ -336,8 +336,6 @@ export default {
 
 <style lang="scss" scoped>
 .ww-lightbox {
-  // Layout : display flex column
-
   position: inherit;
 
   &__explorer {
@@ -352,10 +350,8 @@ export default {
       top: 20px;
       right: 20px;
 
-      // cursor: pointer;
+      // To update
       z-index: 10000;
-      // border: 1px solid black;
-      // background-color: white;
     }
 
     position: fixed;
@@ -391,10 +387,8 @@ export default {
     top: 50%;
     transform: translateY(-50%);
 
-    // cursor: pointer;
+    // To update
     z-index: 10000;
-    // border: 1px solid black;
-    // background-color: white;
 
     &.-prev {
       left: 0px;
