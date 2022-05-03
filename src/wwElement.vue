@@ -25,20 +25,18 @@
       </div>
     </div>
     <div class="ww-lightbox__explorer" v-show="isExplorerVisible && !isEditing">
-      <div class="close-button" @click="handlerExplorer" explorer-navigation>
+      <div class="close-button" @click="handlerExplorer">
         <wwElement v-bind="content.closeIcon" />
       </div>
       <div class="ww-lightbox__explorer-content">
-        <TransitionGroup :name="activeTransition" mode="out-in">
-          <template v-for="(element, index) in explorerContent">
-            <div
-              class="content-container"
-              v-if="index === lightboxIndex"
-              v-html="element.outerHTML"
-              :key="`item-${index}`"
-            />
-          </template>
-        </TransitionGroup>
+        <Transition :name="activeTransition" mode="out-in">
+          <div
+            class="content-container"
+            v-if="explorerHTML"
+            v-html="explorerHTML"
+            :key="`item-${lightboxIndex}`"
+          />
+        </Transition>
       </div>
     </div>
     <div v-show="showPrev" class="explorer-nav -prev" @click="explorerPrev">
@@ -49,7 +47,8 @@
     </div>
     <div
       class="ww-lightbox__summary"
-      v-if="!isEditing && isExplorerVisible && groupMiniatures.length > 1"
+      ref="lightboxSummary"
+      v-if="!isEditing && isExplorerVisible"
     >
       <div
         class="summary-item"
@@ -149,6 +148,9 @@ export default {
       contentIndex: 0,
       explorerContent: [],
       activeTransition: "fadeLeft",
+      isDown: false,
+      startX: null,
+      scrollLeft: null,
     };
   },
   watch: {
@@ -188,6 +190,36 @@ export default {
       this.isExplorerVisible = true;
       this.contentIndex = index;
     },
+    isExplorerVisible(val) {
+      if (!this.isEditing && val) {
+        this.$nextTick(() => {
+          console.log(this.$refs);
+          const summary = this.$refs.lightboxSummary;
+          // console.log(summary);
+          summary.addEventListener("mousedown", (e) => {
+            this.isDown = true;
+            summary.classList.add("active");
+            this.startX = e.pageX - summary.offsetLeft;
+            this.scrollLeft = summary.scrollLeft;
+          });
+          summary.addEventListener("mouseleave", () => {
+            this.isDown = false;
+            summary.classList.remove("active");
+          });
+          summary.addEventListener("mouseup", () => {
+            this.isDown = false;
+            summary.classList.remove("active");
+          });
+          summary.addEventListener("mousemove", (e) => {
+            if (!this.isDown) return;
+            e.preventDefault();
+            const x = e.pageX - summary.offsetLeft;
+            const walk = (x - this.startX) * 2;
+            summary.scrollLeft = this.scrollLeft - walk;
+          });
+        });
+      }
+    },
   },
   computed: {
     isEditing() {
@@ -200,24 +232,25 @@ export default {
       return false;
     },
     showPrev() {
-      return !!this.explorerContent[this.lightboxIndex - 1];
+      return (
+        !!this.explorerContent[this.lightboxIndex - 1] && this.isExplorerVisible
+      );
     },
     showNext() {
-      return !!this.explorerContent[this.lightboxIndex + 1];
+      return (
+        !!this.explorerContent[this.lightboxIndex + 1] && this.isExplorerVisible
+      );
     },
     cssVariables() {
       return {
         "--backdrop-color": this.content.backdropColor,
       };
     },
-    filteredMiniatures() {
-      if (!this.linked) {
-        return this.groupMiniatures.filter(
-          (item) => item.lightboxId === this.id
-        );
-      }
-
-      return this.groupMiniatures;
+    explorerHTML() {
+      return this.explorerContent[this.lightboxIndex] &&
+        this.explorerContent[this.lightboxIndex].outerHTML
+        ? this.explorerContent[this.lightboxIndex].outerHTML
+        : null;
     },
   },
   methods: {
@@ -266,8 +299,6 @@ export default {
         clone.removeAttribute("data-lightbox-media");
         this.explorerContent.push(clone);
       }
-
-      console.log("explorerContent", this.explorerContent);
     },
     destroyExplorer() {
       this.explorerContent = [];
@@ -326,8 +357,8 @@ export default {
   position: inherit;
 
   &__trigger {
-    padding: 10px;
-    border: 10px solid lightcoral;
+    // padding: 10px;
+    // border: 10px solid lightcoral;
   }
 
   &__explorer {
@@ -342,10 +373,10 @@ export default {
       top: 20px;
       right: 20px;
 
-      cursor: pointer;
+      // cursor: pointer;
       z-index: 10000;
-      border: 1px solid black;
-      background-color: white;
+      // border: 1px solid black;
+      // background-color: white;
     }
 
     position: fixed;
@@ -381,10 +412,10 @@ export default {
     top: 50%;
     transform: translateY(-50%);
 
-    cursor: pointer;
+    // cursor: pointer;
     z-index: 10000;
-    border: 1px solid black;
-    background-color: white;
+    // border: 1px solid black;
+    // background-color: white;
 
     &.-prev {
       left: 0px;
@@ -396,6 +427,9 @@ export default {
   }
 
   &__summary {
+    width: 90%;
+    overflow-x: auto;
+
     z-index: 100;
     position: fixed;
     bottom: 0px;
@@ -404,10 +438,15 @@ export default {
 
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
+    align-items: center;
 
-    .summary-item {
-      min-width: 40px;
+    &.active {
+      cursor: grabbing;
+    }
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 }
