@@ -7,8 +7,5 @@
   },
   "devDependencies": {
     "@weweb/cli": "latest"
-  },
-  "dependencies": {
-    "swiper": "^8.1.4"
   }
 }
