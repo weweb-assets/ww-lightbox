@@ -12,7 +12,6 @@ export default function useMiniatures(props) {
       .map((item) => ({
         lightboxId: id,
         url: item.miniature,
-        linked,
       }));
   });
   const groupMiniatures = computed(() => {

@@ -93,8 +93,6 @@ export default {
   setup(props) {
     const { id, groupMiniatures, linked } = useMiniatures(props);
 
-    console.log(id, groupMiniatures, linked);
-
     return { id, groupMiniatures, linked };
   },
   data() {
