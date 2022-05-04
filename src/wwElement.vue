@@ -126,13 +126,15 @@ export default {
           if (media && oldMedias[index]) {
             if (media.media !== oldMedias[index].media) {
               const mediaElements = this.content.mediaElements;
-              const name = `Media - ${
-                media.media === "ww-image" ? "Media - Image" : "Media - Video"
-              }`;
               const elem = await wwLib.createElement(
                 media.media,
                 {},
-                { name },
+                {
+                  name:
+                    media.media === "ww-image"
+                      ? "Media - Image"
+                      : "Media - Video",
+                },
                 this.wwFrontState.sectionId
               );
               mediaElements[index] = elem;
