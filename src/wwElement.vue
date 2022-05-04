@@ -24,7 +24,7 @@
         </div>
       </div>
     </div>
-    <div class="ww-lightbox__explorer" v-show="isExplorerVisible && !isEditing">
+    <div class="ww-lightbox__explorer" v-show="isExplorerVisible">
       <div class="close-button" @click="handlerExplorer">
         <wwElement v-bind="content.closeIcon" />
       </div>
@@ -115,6 +115,7 @@ export default {
 
       this.contentIndex = 0;
       this.lightboxIndex = 0;
+      this.$emit("update:content", { edit: false });
     },
     "content.medias": {
       deep: true,
