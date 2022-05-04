@@ -62,6 +62,7 @@ export default {
       },
     },
     edit: {
+      editorOnly: true,
       type: "OnOff",
       label: {
         en: "Edit lightbox",
@@ -70,7 +71,7 @@ export default {
       defaultValue: false,
     },
     medias: {
-      hidden: (content) => !content.edit,
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       label: { en: "Medias", fr: "Medias" },
       type: "Array",
       options: {
@@ -115,7 +116,8 @@ export default {
       defaultValue: [{ media: "ww-image" }],
     },
     mediaIndex: {
-      hidden: (content) => !content.edit || content.medias.length <= 1,
+      hidden: (content, sidepanelContent) =>
+        !sidepanelContent.edit || content.medias.length <= 1,
       label: { en: "Selected media", fr: "Media selectionné" },
       type: "Tabs",
       editorOnly: true,
@@ -134,7 +136,7 @@ export default {
       defaultValue: 0,
     },
     backdropColor: {
-      hidden: (content) => !content.edit,
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "Color",
       label: {
         en: "Backdrop color",
@@ -148,7 +150,7 @@ export default {
       bindable: true,
     },
     linked: {
-      hidden: (content) => !content.edit,
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "OnOff",
       label: {
         en: "Link with other lightboxes",
@@ -157,7 +159,8 @@ export default {
       defaultValue: false,
     },
     group: {
-      hidden: (content) => !content.linked || !content.edit,
+      hidden: (content, sidepanelContent) =>
+        !content.linked || !sidepanelContent.edit,
       label: { en: "lightbox group" },
       type: "Text",
       options: {

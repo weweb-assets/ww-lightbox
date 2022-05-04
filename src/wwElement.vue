@@ -115,7 +115,11 @@ export default {
 
       this.contentIndex = 0;
       this.lightboxIndex = 0;
-      this.$emit("update:content", { edit: false });
+
+      this.$emit("update:sidepanel-content", {
+        path: "edit",
+        value: false,
+      });
     },
     "content.medias": {
       deep: true,
@@ -148,7 +152,7 @@ export default {
     "content.linked"() {
       this.$emit("update:content", { group: "" });
     },
-    "content.edit"(val) {
+    "wwEditorState.sidepanelContent.edit"(val) {
       if (val) this.handleLightboxes();
       else this.destroyExplorer();
 
