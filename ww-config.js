@@ -1,7 +1,11 @@
 export default {
   editor: {
     label: {
-      en: "Lightbox",
+      en: "Lightbox link",
+    },
+    icon: "fontawesome/solid/film",
+    bubble: {
+      icon: "fontawesome/solid/film",
     },
   },
   properties: {
@@ -9,46 +13,64 @@ export default {
       hidden: true,
       defaultValue: [],
       navigator: {
-        group: "Lightbox link",
-      },
-    },
-    contentContainer: {
-      hidden: true,
-      defaultValue: [],
-      navigator: {
-        group: "Lightbox content",
-      },
-    },
-    closeIcon: {
-      hidden: true,
-      defaultValue: { isWwObject: true, type: "ww-icon", name: "Close icon" },
-    },
-    explorerArrows: {
-      hidden: true,
-      defaultValue: [
-        { isWwObject: true, type: "ww-icon" },
-        { isWwObject: true, type: "ww-icon" },
-      ],
-    },
-    toggleEdition: {
-      type: "Button",
-      label: null,
-      options: {
-        text: {
-          en: "Toggle edition",
-        },
-        action: "handlerExplorer",
+        group: "Link",
       },
     },
     mediaElements: {
       hidden: true,
-      defaultValue: [{ isWwObject: true, type: "ww-image" }],
+      defaultValue: [
+        {
+          isWwObject: true,
+          type: "ww-image",
+          state: { name: "Media - Image" },
+        },
+      ],
+      navigator: {
+        group: "Content",
+      },
     },
     miniatureElement: {
       hidden: true,
-      defaultValue: { isWwObject: true, type: "ww-image" },
+      defaultValue: {
+        isWwObject: true,
+        type: "ww-image",
+        state: { name: "Miniature - Image" },
+      },
+      navigator: {
+        group: "Miniatures",
+      },
+    },
+    closeIcon: {
+      hidden: true,
+      defaultValue: {
+        isWwObject: true,
+        type: "ww-icon",
+        state: { name: "Close icon" },
+      },
+      navigator: {
+        group: "Navigation icons",
+      },
+    },
+    explorerArrows: {
+      hidden: true,
+      defaultValue: [
+        { isWwObject: true, type: "ww-icon", state: { name: "Left arrow" } },
+        { isWwObject: true, type: "ww-icon", state: { name: "Right arrow" } },
+      ],
+      navigator: {
+        group: "Navigation icons",
+      },
+    },
+    edit: {
+      type: "OnOff",
+      label: {
+        en: "Edit lightbox",
+        fr: "Edit lightbox",
+      },
+      defaultValue: false,
     },
     medias: {
+      hidden: (content) => !content.edit,
       label: { en: "Medias", fr: "Medias" },
       type: "Array",
       options: {
@@ -74,7 +96,6 @@ export default {
                     },
                   ],
                 },
-                defaultValue: "ww-image",
               },
               miniature: {
                 type: "Image",
@@ -83,10 +104,10 @@ export default {
                   fr: "Miniature image",
                 },
                 bindable: true,
-                defaultValue: "",
               },
             },
           },
+          defaultValue: { media: "ww-image" },
         },
         onRemove: "onMediaRemove",
         onAdd: "onMediaAdded",
@@ -94,7 +115,8 @@ export default {
       defaultValue: [{ media: "ww-image" }],
     },
     mediaIndex: {
-      label: { en: "Media index", fr: "Media index" },
+      hidden: (content) => !content.edit || content.medias.length <= 1,
+      label: { en: "Selected media", fr: "Media selectionné" },
       type: "Tabs",
       editorOnly: true,
       options: (content) => {
@@ -106,12 +128,13 @@ export default {
           }),
           prefixLabel: "Slide",
           nbTabs: content.medias.length,
-          bound: true,
+          fixed: true,
         };
       },
       defaultValue: 0,
     },
     backdropColor: {
+      hidden: (content) => !content.edit,
       type: "Color",
       label: {
         en: "Backdrop color",
@@ -125,6 +148,7 @@ export default {
       bindable: true,
     },
     linked: {
+      hidden: (content) => !content.edit,
       type: "OnOff",
       label: {
         en: "Link with other lightboxes",
@@ -133,7 +157,7 @@ export default {
       defaultValue: false,
     },
     group: {
-      hidden: (content) => !content.linked,
+      hidden: (content) => !content.linked || !content.edit,
       label: { en: "lightbox group" },
       type: "Text",
       options: {

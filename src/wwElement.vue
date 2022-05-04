@@ -10,7 +10,7 @@
       </wwLayout>
     </div>
     <div class="ww-lightbox__content" v-show="isExplorerVisible && isEditing">
-      <div class="content-container" ref="contentContainer">
+      <div class="content-container">
         <div v-for="(el, index) in content.mediaElements" :key="index">
           <div v-show="index === contentIndex">
             <wwElement
@@ -82,6 +82,8 @@
 <script>
 import useMiniatures from "./useMiniatures";
 
+// TODO On selected
+
 export default {
   props: {
     content: { type: Object, required: true },
@@ -124,10 +126,13 @@ export default {
           if (media && oldMedias[index]) {
             if (media.media !== oldMedias[index].media) {
               const mediaElements = this.content.mediaElements;
+              const name = `Media - ${
+                media.media === "ww-image" ? "Media - Image" : "Media - Video"
+              }`;
               const elem = await wwLib.createElement(
                 media.media,
                 {},
-                {},
+                { name },
                 this.wwFrontState.sectionId
               );
               mediaElements[index] = elem;
@@ -139,6 +144,14 @@ export default {
     },
     "content.linked"() {
       this.$emit("update:content", { group: "" });
+    },
+    "content.edit"(val) {
+      if (val) this.handleLightboxes();
+      else this.destroyExplorer();
+
+      this.$nextTick(() => {
+        this.isExplorerVisible = val;
+      });
     },
     "wwEditorState.sidepanelContent.mediaIndex"(index) {
       this.isExplorerVisible = true;
@@ -257,11 +270,12 @@ export default {
         const elem = await wwLib.createElement(
           "ww-image",
           {},
-          {},
+          { name: "Media - Image" },
           this.wwFrontState.sectionId
         );
         mediaElements.push(elem);
       } else {
+        console.log(mediaElements[mediaElements.length - 1]);
         const elem = await wwLib.wwObjectHelper.cloneElement(
           mediaElements[mediaElements.length - 1].uid,
           this.wwFrontState.sectionId
