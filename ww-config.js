@@ -110,8 +110,8 @@ export default {
           },
           defaultValue: { media: "ww-image" },
         },
-        onRemove: "onMediaRemove",
-        onAdd: "onMediaAdded",
+        remove: "onMediaRemove",
+        add: "onMediaAdded",
       },
       defaultValue: [{ media: "ww-image" }],
     },
@@ -149,7 +149,7 @@ export default {
       defaultValue: "#000000",
       bindable: true,
     },
-    linked: {
+    displayGroup: {
       hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "OnOff",
       label: {
@@ -157,10 +157,11 @@ export default {
         fr: "Link with other lightboxes",
       },
       defaultValue: false,
+      editorOnly: true,
     },
     group: {
-      hidden: (content, sidepanelContent) =>
-        !content.linked || !sidepanelContent.edit,
+      hidden: (_, sidepanelContent) =>
+        !sidepanelContent.displayGroup || !sidepanelContent.edit,
       label: { en: "lightbox group" },
       type: "Text",
       options: {

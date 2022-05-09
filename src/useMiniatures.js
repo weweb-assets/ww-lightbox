@@ -5,7 +5,7 @@ const GROUPS_MINIATURES = reactive({});
 export default function useMiniatures(props) {
   const id = `ww-lightbox-${wwLib.wwUtils.getUniqueId()}`;
   const group = computed(() => props.content.group);
-  const linked = computed(() => props.content.linked);
+  const linked = computed(() => props.content.group.length);
   const miniatures = computed(() => {
     return props.content.medias
       .filter((item) => item && "miniature" in item)

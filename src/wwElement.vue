@@ -9,14 +9,15 @@
         </template>
       </wwLayout>
     </div>
-    <div class="ww-lightbox__content" v-show="isExplorerVisible && isEditing">
+    <!-- Editable content, visible only in edition mode.
+    V-show mandatory because the elements present here must always be present in the DOM -->
+    <div v-show="isExplorerVisible && isEditing" class="ww-lightbox__content">
       <div class="content-container">
         <div v-for="(el, index) in content.mediaElements" :key="index">
-          <div v-show="index === contentIndex">
+          <div v-show="index === mediaIndex">
             <wwElement
               data-lightbox-media
               :data-lightbox-group="content.group"
-              :data-lightbox-linked="content.linked"
               :data-lightbox-id="id"
               v-bind="el"
             />
@@ -24,21 +25,29 @@
         </div>
       </div>
     </div>
-    <div class="ww-lightbox__explorer" v-show="isExplorerVisible">
+    <!-- Lightbox explorer. Visible only in preview mode or on the published site.
+    Here will be injected the content of the lightbox from the editable content above.
+    Or from other lightboxes if linked. See function createLightboxes -->
+    <div
+      v-show="isExplorerVisible && !isEditing"
+      class="ww-lightbox__explorer"
+      @mousemove="onMouseMove"
+    >
       <div class="close-button" @click="handlerExplorer">
         <wwElement v-bind="content.closeIcon" />
       </div>
       <div class="ww-lightbox__explorer-content">
         <Transition :name="activeTransition" mode="out-in">
           <div
-            class="content-container"
             v-if="explorerHTML"
+            class="content-container"
             v-html="explorerHTML"
             :key="`item-${lightboxIndex}`"
           />
         </Transition>
       </div>
     </div>
+    <!-- Managing the navigation -->
     <div v-show="showPrev" class="explorer-nav -prev" @click="explorerPrev">
       <wwElement v-bind="content.explorerArrows[0]" />
     </div>
@@ -46,9 +55,13 @@
       <wwElement v-bind="content.explorerArrows[1]" />
     </div>
     <div
+      v-if="isExplorerSummary"
       class="ww-lightbox__summary"
+      :class="{ active: isDrag }"
       ref="lightboxSummary"
-      v-if="!isEditing && isExplorerVisible"
+      @mousedown="onMouseDown"
+      @mouseup="onMouseUp"
+      @mousemove="onMouseMove"
     >
       <div
         class="summary-item"
@@ -62,17 +75,11 @@
         />
       </div>
     </div>
-    <div
-      class="ww-lightbox__summary"
-      v-else-if="isEditing && isExplorerVisible"
-    >
+    <div v-else-if="isEditionSummary" class="ww-lightbox__summary">
       <div class="summary-item">
         <wwElement
-          v-if="
-            groupMiniatures[contentIndex] && groupMiniatures[contentIndex].url
-          "
           v-bind="content.miniatureElement"
-          :wwProps="{ url: groupMiniatures[contentIndex].url }"
+          :wwProps="{ url: groupMiniatures[mediaIndex].url }"
         />
       </div>
     </div>
@@ -82,8 +89,6 @@
 <script>
 import useMiniatures from "./useMiniatures";
 
-// TODO On selected
-
 export default {
   props: {
     content: { type: Object, required: true },
@@ -92,6 +97,7 @@ export default {
     wwEditorState: { type: Object, required: true },
     /* wwEditor:end */
   },
+  emits: ["update:content:effect", "update:sidepanel-content"],
   setup(props) {
     const { id, groupMiniatures, linked } = useMiniatures(props);
 
@@ -101,10 +107,9 @@ export default {
     return {
       isExplorerVisible: false,
       lightboxIndex: 0,
-      contentIndex: 0,
       explorerContent: [],
       activeTransition: "fadeLeft",
-      isDown: false,
+      isDrag: false,
       startX: null,
       scrollLeft: null,
     };
@@ -113,7 +118,6 @@ export default {
     isEditing(val) {
       if (val === false) this.isExplorerVisible = false;
 
-      this.contentIndex = 0;
       this.lightboxIndex = 0;
 
       this.$emit("update:sidepanel-content", {
@@ -130,57 +134,40 @@ export default {
         newMedias.forEach(async (media, index) => {
           if (media && oldMedias[index]) {
             if (media.media !== oldMedias[index].media) {
-              const mediaElements = this.content.mediaElements;
+              const mediaElements = [...this.content.mediaElements];
               const elem = await wwLib.createElement(
                 media.media,
                 {},
                 {
-                  name:
-                    media.media === "ww-image"
-                      ? "Media - Image"
-                      : "Media - Video",
+                  name: this.getElementName(media.media),
                 },
                 this.wwFrontState.sectionId
               );
               mediaElements[index] = elem;
-              this.$emit("update:content", { mediaElements });
+              this.$emit("update:content:effect", { mediaElements });
             }
           }
         });
       },
     },
-    "content.linked"() {
-      this.$emit("update:content", { group: "" });
+    "wwEditorState.sidepanelContent.displayGroup"(val) {
+      if (val === false) {
+        this.$emit("update:content:effect", {
+          path: "group",
+          value: "",
+        });
+      }
     },
     "wwEditorState.sidepanelContent.edit"(val) {
-      if (val) this.handleLightboxes();
+      if (val) this.createLightboxes();
       else this.destroyExplorer();
 
       this.$nextTick(() => {
         this.isExplorerVisible = val;
       });
     },
-    "wwEditorState.sidepanelContent.mediaIndex"(index) {
+    "wwEditorState.sidepanelContent.mediaIndex"() {
       this.isExplorerVisible = true;
-      this.contentIndex = index;
-    },
-    isExplorerVisible(val) {
-      this.$nextTick(() => {
-        const summary = this.$refs.lightboxSummary;
-        if (!summary) return;
-
-        if (!this.isEditing && val) {
-          summary.addEventListener("mousedown", this.onMouseDown);
-          summary.addEventListener("mouseleave", this.onMouseLeave);
-          summary.addEventListener("mouseup", this.onMouseUp);
-          summary.addEventListener("mousemove", this.onMouseMove);
-        } else if (!val) {
-          summary.removeEventListener("mousedown", this.onMouseDown);
-          summary.removeEventListener("mouseleave", this.onMouseLeave);
-          summary.removeEventListener("mouseup", this.onMouseUp);
-          summary.removeEventListener("mousemove", this.onMouseMove);
-        }
-      });
     },
   },
   computed: {
@@ -214,17 +201,51 @@ export default {
         ? this.explorerContent[this.lightboxIndex].outerHTML
         : null;
     },
+    mediaIndex() {
+      const mediaIndex =
+        this.wwEditorState.sidepanelContent &&
+        "mediaIndex" in this.wwEditorState.sidepanelContent
+          ? this.wwEditorState.sidepanelContent.mediaIndex
+          : 0;
+
+      if (!this.content.mediaElements[mediaIndex]) {
+        this.$emit("update:sidepanel-content", {
+          path: "mediaIndex",
+          value: 0,
+        });
+
+        return 0;
+      }
+
+      return this.isEditing ? mediaIndex : this.lightboxIndex;
+    },
+    isEditionSummary() {
+      return (
+        this.isEditing &&
+        this.isExplorerVisible &&
+        this.groupMiniatures[this.mediaIndex] &&
+        this.groupMiniatures[this.mediaIndex].url
+      );
+    },
+    isExplorerSummary() {
+      return (
+        !this.isEditing &&
+        this.isExplorerVisible &&
+        this.groupMiniatures.length > 1
+      );
+    },
   },
   methods: {
     async handlerExplorer() {
-      if (!this.isExplorerVisible) this.handleLightboxes();
+      if (this.isEditing) return;
+      if (!this.isExplorerVisible) this.createLightboxes();
       else this.destroyExplorer();
 
       this.$nextTick(() => {
         this.isExplorerVisible = !this.isExplorerVisible;
       });
     },
-    handleLightboxes() {
+    createLightboxes() {
       let lightboxes;
 
       if (this.linked) {
@@ -241,37 +262,51 @@ export default {
         );
       }
 
+      this.destroyExplorer();
+
+      for (let node of lightboxes) {
+        let copy = false;
+        const group = node.getAttribute("data-lightbox-group");
+        const id = node.getAttribute("data-lightbox-id");
+
+        if (!group.length && this.id === id) copy = true;
+        if (group.length && group === this.content.group) copy = true;
+
+        if (copy) {
+          const clone = node.cloneNode(true);
+          clone.removeAttribute("data-lightbox-media");
+          this.explorerContent.push(clone);
+        }
+      }
+
       const list = Array.from(lightboxes);
       const indexInList = Array.prototype.indexOf.call(
         lightboxes,
         list.find((el) => el.getAttribute("data-lightbox-id") === this.id)
       );
 
-      this.lightboxIndex = indexInList;
-
-      this.destroyExplorer();
-
-      for (let node of lightboxes) {
-        const group = node.getAttribute("data-lightbox-group");
-        const id = node.getAttribute("data-lightbox-id");
-
-        if (!group.length && this.id !== id) return;
-
-        const clone = node.cloneNode(true);
-        clone.removeAttribute("data-lightbox-media");
-        this.explorerContent.push(clone);
-      }
+      this.lightboxIndex = this.lightboxIndex.length > 1 ? indexInList : 0;
     },
     destroyExplorer() {
       this.explorerContent = [];
     },
     onMediaRemove(index) {
+      const medias = [...this.content.medias];
+      medias.splice(index, 1);
+
       const mediaElements = [...this.content.mediaElements];
       mediaElements.splice(index, 1);
 
-      this.$emit("update:content", { mediaElements });
+      this.$emit("update:content:effect", { mediaElements, medias });
     },
     async onMediaAdded() {
+      const medias = [...this.content.medias];
+      if (medias.length === 0) {
+        medias.push({ media: "ww-image" });
+      } else {
+        medias.push(_.cloneDeep(medias[medias.length - 1]));
+      }
+
       const mediaElements = [...this.content.mediaElements];
       if (mediaElements.length === 0) {
         const elem = await wwLib.createElement(
@@ -282,14 +317,16 @@ export default {
         );
         mediaElements.push(elem);
       } else {
-        console.log(mediaElements[mediaElements.length - 1]);
+        const name = this.getElementName(medias[medias.length - 1].media);
         const elem = await wwLib.wwObjectHelper.cloneElement(
           mediaElements[mediaElements.length - 1].uid,
-          this.wwFrontState.sectionId
+          this.wwFrontState.sectionId,
+          name
         );
         mediaElements.push(elem);
       }
-      this.$emit("update:content", { mediaElements });
+
+      this.$emit("update:content:effect", { mediaElements, medias });
     },
     changeIndex(index) {
       this.activeTransition =
@@ -306,31 +343,21 @@ export default {
         this.changeIndex(this.lightboxIndex + 1);
       }
     },
+    getElementName(type) {
+      return type === "ww-image" ? "Media - Image" : "Media - Video";
+    },
     onMouseDown(event) {
       const summary = this.$refs.lightboxSummary;
       if (!summary) return;
-
-      this.isDown = true;
-      summary.classList.add("active");
+      this.isDrag = true;
       this.startX = event.pageX - summary.offsetLeft;
       this.scrollLeft = summary.scrollLeft;
     },
-    onMouseLeave(event) {
-      const summary = this.$refs.lightboxSummary;
-      if (!summary) return;
-
-      this.isDown = false;
-      summary.classList.remove("active");
-    },
-    onMouseUp(event) {
-      const summary = this.$refs.lightboxSummary;
-      if (!summary) return;
-
-      this.isDown = false;
-      summary.classList.remove("active");
+    onMouseUp() {
+      this.isDrag = false;
     },
     onMouseMove(event) {
-      if (!this.isDown) return;
+      if (!this.isDrag) return;
       const summary = this.$refs.lightboxSummary;
       if (!summary) return;
 
@@ -339,18 +366,6 @@ export default {
       const walk = (x - this.startX) * 2;
       summary.scrollLeft = this.scrollLeft - walk;
     },
-  },
-  beforeUnmount() {
-    const summary = this.$refs.lightboxSummary;
-    if (!summary) return;
-
-    summary.removeEventListener("mousedown", this.onMouseDown);
-    summary.removeEventListener("mouseleave", this.onMouseLeave);
-    summary.removeEventListener("mouseup", this.onMouseUp);
-    summary.removeEventListener("mousemove", this.onMouseMove);
-  },
-  mounted() {
-    this.handleLightboxes();
   },
 };
 </script>
@@ -371,8 +386,7 @@ export default {
       top: 20px;
       right: 20px;
 
-      // To update
-      z-index: 10000;
+      z-index: 102;
     }
 
     position: fixed;
@@ -389,7 +403,7 @@ export default {
   }
 
   &__content {
-    z-index: 3;
+    z-index: 101;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -404,12 +418,12 @@ export default {
   }
 
   .explorer-nav {
+    z-index: 102;
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
 
-    // To update
-    z-index: 10000;
+    z-index: 101;
 
     &.-prev {
       left: 0px;
@@ -424,7 +438,7 @@ export default {
     width: 90%;
     overflow-x: auto;
 
-    z-index: 100;
+    z-index: 102;
     position: fixed;
     bottom: 0px;
     left: 50%;
