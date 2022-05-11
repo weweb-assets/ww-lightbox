@@ -1,16 +1,174 @@
 export default {
   editor: {
     label: {
-      en: "My Element",
+      en: "Lightbox link",
+    },
+    icon: "fontawesome/solid/film",
+    bubble: {
+      icon: "fontawesome/solid/film",
     },
   },
   properties: {
-    textColor: {
-      label: {
-        en: "Text color",
+    triggerContainer: {
+      hidden: true,
+      defaultValue: [],
+      navigator: {
+        group: "Link",
       },
+    },
+    mediaElements: {
+      hidden: true,
+      defaultValue: [
+        {
+          isWwObject: true,
+          type: "ww-image",
+          state: { name: "Media - Image" },
+        },
+      ],
+      navigator: {
+        group: "Content",
+      },
+    },
+    miniatureElement: {
+      hidden: true,
+      defaultValue: {
+        isWwObject: true,
+        type: "ww-image",
+        state: { name: "Miniature - Image" },
+      },
+      navigator: {
+        group: "Miniatures",
+      },
+    },
+    closeIcon: {
+      hidden: true,
+      defaultValue: {
+        isWwObject: true,
+        type: "ww-icon",
+        state: { name: "Close icon" },
+      },
+      navigator: {
+        group: "Navigation icons",
+      },
+    },
+    explorerArrows: {
+      hidden: true,
+      defaultValue: [
+        { isWwObject: true, type: "ww-icon", state: { name: "Left arrow" } },
+        { isWwObject: true, type: "ww-icon", state: { name: "Right arrow" } },
+      ],
+      navigator: {
+        group: "Navigation icons",
+      },
+    },
+    edit: {
+      editorOnly: true,
+      type: "OnOff",
+      label: {
+        en: "Edit lightbox",
+        fr: "Edit lightbox",
+      },
+      defaultValue: false,
+    },
+    medias: {
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
+      label: { en: "Medias", fr: "Medias" },
+      type: "Array",
+      options: {
+        item: {
+          type: "Object",
+          options: {
+            item: {
+              media: {
+                type: "TextSelect",
+                label: {
+                  en: "Type",
+                  fr: "Type",
+                },
+                options: {
+                  options: [
+                    {
+                      value: "ww-video",
+                      label: { en: "Video", fr: "Video" },
+                    },
+                    {
+                      value: "ww-image",
+                      label: { en: "Image", fr: "Image" },
+                    },
+                  ],
+                },
+              },
+              miniature: {
+                type: "Image",
+                label: {
+                  en: "Miniature image",
+                  fr: "Miniature image",
+                },
+                bindable: true,
+              },
+            },
+          },
+          defaultValue: { media: "ww-image" },
+        },
+        remove: "onMediaRemove",
+        add: "onMediaAdded",
+      },
+      defaultValue: [{ media: "ww-image" }],
+    },
+    mediaIndex: {
+      hidden: (content, sidepanelContent) =>
+        !sidepanelContent.edit || content.medias.length <= 1,
+      label: { en: "Selected media", fr: "Media selectionné" },
+      type: "Tabs",
+      editorOnly: true,
+      options: (content) => {
+        return {
+          labels: content.medias.map((_, index) => {
+            return {
+              label: `Media ${index + 1}`,
+            };
+          }),
+          prefixLabel: "Slide",
+          nbTabs: content.medias.length,
+          fixed: true,
+        };
+      },
+      defaultValue: 0,
+    },
+    backdropColor: {
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "Color",
-      defaultValue: "#F23636",
+      label: {
+        en: "Backdrop color",
+        fr: "Backdrop color",
+      },
+      options: {
+        nullable: true,
+        gradient: true,
+      },
+      defaultValue: "#000000",
+      bindable: true,
+    },
+    displayGroup: {
+      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
+      type: "OnOff",
+      label: {
+        en: "Link with other lightboxes",
+        fr: "Link with other lightboxes",
+      },
+      defaultValue: false,
+      editorOnly: true,
+    },
+    group: {
+      hidden: (_, sidepanelContent) =>
+        !sidepanelContent.displayGroup || !sidepanelContent.edit,
+      label: { en: "lightbox group" },
+      type: "Text",
+      options: {
+        placeholder: "Groupe name",
+      },
+      defaultValue: "",
+      bindable: true,
     },
   },
 };
