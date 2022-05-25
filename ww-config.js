@@ -23,7 +23,10 @@ export default {
         {
           isWwObject: true,
           type: "ww-image",
-          state: { name: "Media - Image" },
+          state: {
+            name: "Media - Image",
+            style: { default: { width: "70%" } },
+          },
         },
       ],
       navigator: {
@@ -35,7 +38,10 @@ export default {
       defaultValue: {
         isWwObject: true,
         type: "ww-image",
-        state: { name: "Miniature - Image" },
+        state: {
+          name: "Miniature - Image",
+          style: { default: { width: "150px" } },
+        },
       },
       navigator: {
         group: "Miniatures",
@@ -72,6 +78,26 @@ export default {
       bindable: true,
       defaultValue: false,
     },
+    mediaIndex: {
+      hidden: (content) => content.medias.length <= 1,
+      label: { en: "Selected media", fr: "Media selectionné" },
+      section: "settings",
+      type: "Tabs",
+      editorOnly: true,
+      options: (content) => {
+        return {
+          labels: content.medias.map((_, index) => {
+            return {
+              label: `Media ${index + 1}`,
+            };
+          }),
+          prefixLabel: "Slide",
+          nbTabs: content.medias.length,
+          fixed: true,
+        };
+      },
+      defaultValue: 0,
+    },
     medias: {
       label: { en: "Medias", fr: "Medias" },
       section: "settings",
@@ -103,8 +129,8 @@ export default {
               miniature: {
                 type: "Image",
                 label: {
-                  en: "Miniature image",
-                  fr: "Miniature image",
+                  en: "Miniature",
+                  fr: "Miniature",
                 },
                 bindable: true,
               },
@@ -120,26 +146,6 @@ export default {
       },
 
       defaultValue: [{ media: "ww-image" }],
-    },
-    mediaIndex: {
-      hidden: (content) => content.medias.length <= 1,
-      label: { en: "Selected media", fr: "Media selectionné" },
-      section: "settings",
-      type: "Tabs",
-      editorOnly: true,
-      options: (content) => {
-        return {
-          labels: content.medias.map((_, index) => {
-            return {
-              label: `Media ${index + 1}`,
-            };
-          }),
-          prefixLabel: "Slide",
-          nbTabs: content.medias.length,
-          fixed: true,
-        };
-      },
-      defaultValue: 0,
     },
     backdropColor: {
       type: "Color",
