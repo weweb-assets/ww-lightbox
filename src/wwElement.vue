@@ -1,21 +1,21 @@
 <template>
   <div class="ww-lightbox" :style="cssVariables">
     <div class="ww-lightbox__trigger" @click="handlerExplorer">
-      <wwLayout :path="`triggerContainer`">
-        <template #default="{ item }">
-          <wwLayoutItem>
-            <wwElement v-bind="item" />
-          </wwLayoutItem>
-        </template>
-      </wwLayout>
+      <wwElement v-bind="content.triggerLink" />
     </div>
     <!-- Editable content, visible only in edition mode.
     V-show mandatory because the elements present here must always be present in the DOM -->
-    <div v-show="isExplorerVisible && isEditing" class="ww-lightbox__content">
+    <div
+      v-show="
+        (isExplorerVisible && isEditing) || (content.isVisible && isEditing)
+      "
+      class="ww-lightbox__content"
+    >
       <div class="content-container">
         <div v-for="(el, index) in content.mediaElements" :key="index">
           <div v-show="index === mediaIndex">
             <wwElement
+              @update:is-selected="onMediaSelectionChange($event, index)"
               data-lightbox-media
               :data-lightbox-group="content.group"
               :data-lightbox-id="id"
@@ -29,7 +29,9 @@
     Here will be injected the content of the lightbox from the editable content above.
     Or from other lightboxes if linked. See function createLightboxes -->
     <div
-      v-show="isExplorerVisible && !isEditing"
+      v-show="
+        (isExplorerVisible && !isEditing) || (content.isVisible && !isEditing)
+      "
       class="ww-lightbox__explorer"
       @mousemove="onMouseMove"
     >
@@ -97,7 +99,11 @@ export default {
     wwEditorState: { type: Object, required: true },
     /* wwEditor:end */
   },
-  emits: ["update:content:effect", "update:sidepanel-content"],
+  emits: [
+    "update:content",
+    "update:content:effect",
+    "update:sidepanel-content",
+  ],
   setup(props) {
     const { id, groupMiniatures, linked } = useMiniatures(props);
 
@@ -158,13 +164,16 @@ export default {
         });
       }
     },
-    "wwEditorState.sidepanelContent.edit"(val) {
-      if (val) this.createLightboxes();
-      else this.destroyExplorer();
+    "content.isVisible": {
+      immediate: true,
+      handler(val) {
+        if (val) this.createLightboxes();
+        else this.destroyExplorer();
 
-      this.$nextTick(() => {
-        this.isExplorerVisible = val;
-      });
+        this.$nextTick(() => {
+          this.isExplorerVisible = val;
+        });
+      },
     },
     "wwEditorState.sidepanelContent.mediaIndex"() {
       this.isExplorerVisible = true;
@@ -345,6 +354,18 @@ export default {
     },
     getElementName(type) {
       return type === "ww-image" ? "Media - Image" : "Media - Video";
+    },
+    onMediaSelectionChange(isSelected, index) {
+      if (isSelected) {
+        if (!this.content.isVisible) {
+          this.$emit("update:content", { isVisible: true });
+        }
+
+        this.$emit("update:sidepanel-content", {
+          path: "mediaIndex",
+          value: index,
+        });
+      }
     },
     onMouseDown(event) {
       const summary = this.$refs.lightboxSummary;
