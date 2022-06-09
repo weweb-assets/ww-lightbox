@@ -1,7 +1,7 @@
 export default {
   editor: {
     label: {
-      en: "Lightbox link",
+      en: "Lightbox",
     },
     icon: "fontawesome/solid/film",
     bubble: {
@@ -9,11 +9,12 @@ export default {
     },
   },
   properties: {
-    triggerContainer: {
+    triggerLink: {
       hidden: true,
-      defaultValue: [],
-      navigator: {
-        group: "Link",
+      defaultValue: {
+        isWwObject: true,
+        type: "ww-flexbox",
+        state: { name: "Link container" },
       },
     },
     mediaElements: {
@@ -22,11 +23,14 @@ export default {
         {
           isWwObject: true,
           type: "ww-image",
-          state: { name: "Media - Image" },
+          state: {
+            name: "Media - Image",
+            style: { default: { width: "70%" } },
+          },
         },
       ],
       navigator: {
-        group: "Content",
+        group: "Popup",
       },
     },
     miniatureElement: {
@@ -34,7 +38,10 @@ export default {
       defaultValue: {
         isWwObject: true,
         type: "ww-image",
-        state: { name: "Miniature - Image" },
+        state: {
+          name: "Miniature - Image",
+          style: { default: { width: "150px" } },
+        },
       },
       navigator: {
         group: "Miniatures",
@@ -48,7 +55,7 @@ export default {
         state: { name: "Close icon" },
       },
       navigator: {
-        group: "Navigation icons",
+        group: "Popup",
       },
     },
     explorerArrows: {
@@ -58,21 +65,42 @@ export default {
         { isWwObject: true, type: "ww-icon", state: { name: "Right arrow" } },
       ],
       navigator: {
-        group: "Navigation icons",
+        group: "Popup",
       },
     },
-    edit: {
-      editorOnly: true,
+    isVisible: {
       type: "OnOff",
+      section: "settings",
       label: {
-        en: "Edit lightbox",
-        fr: "Edit lightbox",
+        en: "Show lightbox",
+        fr: "Show lightbox",
       },
+      bindable: true,
       defaultValue: false,
     },
+    mediaIndex: {
+      hidden: (content) => content.medias.length <= 1,
+      label: { en: "Selected media", fr: "Media selectionné" },
+      section: "settings",
+      type: "Tabs",
+      editorOnly: true,
+      options: (content) => {
+        return {
+          labels: content.medias.map((_, index) => {
+            return {
+              label: `Media ${index + 1}`,
+            };
+          }),
+          prefixLabel: "Slide",
+          nbTabs: content.medias.length,
+          fixed: true,
+        };
+      },
+      defaultValue: 0,
+    },
     medias: {
-      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       label: { en: "Medias", fr: "Medias" },
+      section: "settings",
       type: "Array",
       options: {
         item: {
@@ -101,8 +129,8 @@ export default {
               miniature: {
                 type: "Image",
                 label: {
-                  en: "Miniature image",
-                  fr: "Miniature image",
+                  en: "Miniature",
+                  fr: "Miniature",
                 },
                 bindable: true,
               },
@@ -110,33 +138,16 @@ export default {
           },
           defaultValue: { media: "ww-image" },
         },
+        navigator: {
+          group: "Popup",
+        },
         remove: "onMediaRemove",
         add: "onMediaAdded",
       },
+
       defaultValue: [{ media: "ww-image" }],
     },
-    mediaIndex: {
-      hidden: (content, sidepanelContent) =>
-        !sidepanelContent.edit || content.medias.length <= 1,
-      label: { en: "Selected media", fr: "Media selectionné" },
-      type: "Tabs",
-      editorOnly: true,
-      options: (content) => {
-        return {
-          labels: content.medias.map((_, index) => {
-            return {
-              label: `Media ${index + 1}`,
-            };
-          }),
-          prefixLabel: "Slide",
-          nbTabs: content.medias.length,
-          fixed: true,
-        };
-      },
-      defaultValue: 0,
-    },
     backdropColor: {
-      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "Color",
       label: {
         en: "Backdrop color",
@@ -150,8 +161,8 @@ export default {
       bindable: true,
     },
     displayGroup: {
-      hidden: (_, sidepanelContent) => !sidepanelContent.edit,
       type: "OnOff",
+      section: "settings",
       label: {
         en: "Link with other lightboxes",
         fr: "Link with other lightboxes",
@@ -160,9 +171,9 @@ export default {
       editorOnly: true,
     },
     group: {
-      hidden: (_, sidepanelContent) =>
-        !sidepanelContent.displayGroup || !sidepanelContent.edit,
+      hidden: (_, sidepanelContent) => !sidepanelContent.displayGroup,
       label: { en: "lightbox group" },
+      section: "settings",
       type: "Text",
       options: {
         placeholder: "Groupe name",

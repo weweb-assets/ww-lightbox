@@ -1,13 +1,7 @@
 <template>
   <div class="ww-lightbox" :style="cssVariables">
-    <div class="ww-lightbox__trigger" @click="handlerExplorer">
-      <wwLayout :path="`triggerContainer`">
-        <template #default="{ item }">
-          <wwLayoutItem>
-            <wwElement v-bind="item" />
-          </wwLayoutItem>
-        </template>
-      </wwLayout>
+    <div class="ww-lightbox__trigger" @click="handlerExplorer(true)">
+      <wwElement v-bind="content.triggerLink" />
     </div>
     <!-- Editable content, visible only in edition mode.
     V-show mandatory because the elements present here must always be present in the DOM -->
@@ -16,6 +10,7 @@
         <div v-for="(el, index) in content.mediaElements" :key="index">
           <div v-show="index === mediaIndex">
             <wwElement
+              @update:is-selected="onMediaSelectionChange($event, index)"
               data-lightbox-media
               :data-lightbox-group="content.group"
               :data-lightbox-id="id"
@@ -33,9 +28,6 @@
       class="ww-lightbox__explorer"
       @mousemove="onMouseMove"
     >
-      <div class="close-button" @click="handlerExplorer">
-        <wwElement v-bind="content.closeIcon" />
-      </div>
       <div class="ww-lightbox__explorer-content">
         <Transition :name="activeTransition" mode="out-in">
           <div
@@ -48,6 +40,13 @@
       </div>
     </div>
     <!-- Managing the navigation -->
+    <div
+      v-show="isExplorerVisible"
+      class="explorer-nav -close"
+      @click="handlerExplorer(false)"
+    >
+      <wwElement v-bind="content.closeIcon" />
+    </div>
     <div v-show="showPrev" class="explorer-nav -prev" @click="explorerPrev">
       <wwElement v-bind="content.explorerArrows[0]" />
     </div>
@@ -115,15 +114,25 @@ export default {
     };
   },
   watch: {
-    isEditing(val) {
-      if (val === false) this.isExplorerVisible = false;
+    isEditing: {
+      immediate: true,
+      handler(val) {
+        this.lightboxIndex = 0;
+        this.isExplorerVisible = this.content.isVisible;
 
-      this.lightboxIndex = 0;
-
-      this.$emit("update:sidepanel-content", {
-        path: "edit",
-        value: false,
-      });
+        if (val) {
+          this.$emit("update:sidepanel-content", {
+            path: "mediaIndex",
+            value: 0,
+          });
+        }
+      },
+    },
+    "content.isVisible": {
+      immediate: true,
+      handler(val) {
+        this.handlerExplorer(val);
+      },
     },
     "content.medias": {
       deep: true,
@@ -157,14 +166,6 @@ export default {
           value: "",
         });
       }
-    },
-    "wwEditorState.sidepanelContent.edit"(val) {
-      if (val) this.createLightboxes();
-      else this.destroyExplorer();
-
-      this.$nextTick(() => {
-        this.isExplorerVisible = val;
-      });
     },
     "wwEditorState.sidepanelContent.mediaIndex"() {
       this.isExplorerVisible = true;
@@ -236,14 +237,14 @@ export default {
     },
   },
   methods: {
-    async handlerExplorer() {
-      if (this.isEditing) return;
-      if (!this.isExplorerVisible) this.createLightboxes();
-      else this.destroyExplorer();
-
-      this.$nextTick(() => {
-        this.isExplorerVisible = !this.isExplorerVisible;
-      });
+    async handlerExplorer(val) {
+      if (val) {
+        this.createLightboxes();
+        this.isExplorerVisible = true;
+      } else {
+        this.destroyExplorer();
+        this.isExplorerVisible = false;
+      }
     },
     createLightboxes() {
       let lightboxes;
@@ -346,6 +347,18 @@ export default {
     getElementName(type) {
       return type === "ww-image" ? "Media - Image" : "Media - Video";
     },
+    onMediaSelectionChange(isSelected, index) {
+      if (isSelected) {
+        if (!this.content.isVisible) {
+          this.$emit("update:content:effect", { isVisible: true });
+        }
+
+        this.$emit("update:sidepanel-content", {
+          path: "mediaIndex",
+          value: index,
+        });
+      }
+    },
     onMouseDown(event) {
       const summary = this.$refs.lightboxSummary;
       if (!summary) return;
@@ -381,14 +394,6 @@ export default {
     justify-content: center;
     align-items: center;
 
-    .close-button {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-
-      z-index: 102;
-    }
-
     position: fixed;
     top: 0px;
     right: 0px;
@@ -420,17 +425,24 @@ export default {
   .explorer-nav {
     z-index: 102;
     position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
 
     z-index: 101;
 
+    &.-close {
+      top: 0px;
+      right: 0px;
+    }
+
     &.-prev {
       left: 0px;
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     &.-next {
       right: 0px;
+      top: 50%;
+      transform: translateY(-50%);
     }
   }
 
