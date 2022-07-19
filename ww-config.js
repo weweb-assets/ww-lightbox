@@ -9,6 +9,17 @@ export default {
     },
   },
   properties: {
+    toggleEdition: {
+      type: "Button",
+      label: null,
+      editorOnly: true,
+      options: {
+        text: {
+          en: "Toggle edition",
+        },
+        action: "toggleEdition",
+      },
+    },
     triggerLink: {
       hidden: true,
       defaultValue: {
@@ -170,17 +181,6 @@ export default {
       },
       defaultValue: "",
       bindable: true,
-    },
-    toggleEdition: {
-      type: "Button",
-      label: null,
-      editorOnly: true,
-      options: {
-        text: {
-          en: "Toggle edition",
-        },
-        action: "toggleEdition",
-      },
     },
   },
 };

@@ -154,10 +154,7 @@ export default {
     },
     "wwEditorState.sidepanelContent.displayGroup"(val) {
       if (val === false) {
-        this.$emit("update:content:effect", {
-          path: "group",
-          value: "",
-        });
+        this.$emit("update:content:effect", { group: "" });
       }
     },
     "wwEditorState.sidepanelContent.mediaIndex"() {
@@ -198,7 +195,10 @@ export default {
         : null;
     },
     mediaIndex() {
+      if (!this.isEditing) return this.lightboxIndex;
+
       const mediaIndex =
+        this.wwEditorState &&
         this.wwEditorState.sidepanelContent &&
         "mediaIndex" in this.wwEditorState.sidepanelContent
           ? this.wwEditorState.sidepanelContent.mediaIndex
@@ -213,15 +213,7 @@ export default {
         return 0;
       }
 
-      return this.isEditing ? mediaIndex : this.lightboxIndex;
-    },
-    isEditionSummary() {
-      return (
-        this.isEditing &&
-        this.isExplorerVisible &&
-        this.groupMiniatures[this.mediaIndex] &&
-        this.groupMiniatures[this.mediaIndex].url
-      );
+      return mediaIndex;
     },
     isExplorerSummary() {
       return this.isExplorerVisible && this.groupMiniatures.length > 1;
