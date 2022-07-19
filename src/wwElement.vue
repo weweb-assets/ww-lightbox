@@ -9,12 +9,12 @@
       <div class="content-container">
         <template v-for="(el, index) in content.mediaElements" :key="index">
           <div
+            v-show="index === mediaIndex"
             class="item-container"
             data-lightbox-media
             :data-lightbox-group="content.group"
             :data-lightbox-id="id"
             :data-isExplorerVisible="isExplorerVisible"
-            v-show="index === mediaIndex"
           >
             <wwElement
               @update:is-selected="onMediaSelectionChange($event, index)"
@@ -176,16 +176,14 @@ export default {
     },
     showPrev() {
       return (
-        (!!this.explorerContent[this.lightboxIndex - 1] &&
-          this.isExplorerVisible) ||
-        (this.isExplorerVisible && this.isEditing)
+        this.isExplorerVisible &&
+        (!!this.explorerContent[this.lightboxIndex - 1] || this.isEditing)
       );
     },
     showNext() {
       return (
-        (!!this.explorerContent[this.lightboxIndex + 1] &&
-          this.isExplorerVisible) ||
-        (this.isExplorerVisible && this.isEditing)
+        this.isExplorerVisible &&
+        (!!this.explorerContent[this.lightboxIndex + 1] || this.isEditing)
       );
     },
     cssVariables() {
@@ -230,7 +228,9 @@ export default {
     },
   },
   methods: {
-    async handlerExplorer(val) {
+    async handlerExplorer(val, fromToggleEdition = false) {
+      if (!fromToggleEdition && this.isEditing) return;
+
       if (val) {
         this.createLightboxes();
         this.isExplorerVisible = true;
@@ -381,7 +381,7 @@ export default {
     },
     /* wwEditor:start */
     toggleEdition() {
-      this.handlerExplorer(!this.isExplorerVisible);
+      this.handlerExplorer(!this.isExplorerVisible, true);
     },
     /* wwEditor:false */
   },
