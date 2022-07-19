@@ -7,17 +7,21 @@
     V-show mandatory because the elements present here must always be present in the DOM -->
     <div v-show="isExplorerVisible && isEditing" class="ww-lightbox__content">
       <div class="content-container">
-        <div v-for="(el, index) in content.mediaElements" :key="index">
-          <div v-show="index === mediaIndex">
+        <template v-for="(el, index) in content.mediaElements" :key="index">
+          <div
+            class="item-container"
+            data-lightbox-media
+            :data-lightbox-group="content.group"
+            :data-lightbox-id="id"
+            :data-isExplorerVisible="isExplorerVisible"
+            v-show="index === mediaIndex"
+          >
             <wwElement
               @update:is-selected="onMediaSelectionChange($event, index)"
-              data-lightbox-media
-              :data-lightbox-group="content.group"
-              :data-lightbox-id="id"
               v-bind="el"
             />
           </div>
-        </div>
+        </template>
       </div>
     </div>
     <!-- Lightbox explorer. Visible only in preview mode or on the published site.
@@ -69,16 +73,9 @@
         @click="changeIndex(index)"
       >
         <wwElement
+          v-if="miniature.url"
           v-bind="content.miniatureElement"
           :wwProps="{ url: miniature.url }"
-        />
-      </div>
-    </div>
-    <div v-else-if="isEditionSummary" class="ww-lightbox__summary">
-      <div class="summary-item">
-        <wwElement
-          v-bind="content.miniatureElement"
-          :wwProps="{ url: groupMiniatures[mediaIndex].url }"
         />
       </div>
     </div>
@@ -118,7 +115,9 @@ export default {
       immediate: true,
       handler(val) {
         this.lightboxIndex = 0;
-        this.isExplorerVisible = this.content.isVisible;
+        this.$nextTick(() => {
+          this.isExplorerVisible = false;
+        });
 
         if (val) {
           this.$emit("update:sidepanel-content", {
@@ -126,12 +125,6 @@ export default {
             value: 0,
           });
         }
-      },
-    },
-    "content.isVisible": {
-      immediate: true,
-      handler(val) {
-        this.handlerExplorer(val);
       },
     },
     "content.medias": {
@@ -183,12 +176,16 @@ export default {
     },
     showPrev() {
       return (
-        !!this.explorerContent[this.lightboxIndex - 1] && this.isExplorerVisible
+        (!!this.explorerContent[this.lightboxIndex - 1] &&
+          this.isExplorerVisible) ||
+        (this.isExplorerVisible && this.isEditing)
       );
     },
     showNext() {
       return (
-        !!this.explorerContent[this.lightboxIndex + 1] && this.isExplorerVisible
+        (!!this.explorerContent[this.lightboxIndex + 1] &&
+          this.isExplorerVisible) ||
+        (this.isExplorerVisible && this.isEditing)
       );
     },
     cssVariables() {
@@ -229,11 +226,7 @@ export default {
       );
     },
     isExplorerSummary() {
-      return (
-        !this.isEditing &&
-        this.isExplorerVisible &&
-        this.groupMiniatures.length > 1
-      );
+      return this.isExplorerVisible && this.groupMiniatures.length > 1;
     },
   },
   methods: {
@@ -276,6 +269,9 @@ export default {
         if (copy) {
           const clone = node.cloneNode(true);
           clone.removeAttribute("data-lightbox-media");
+
+          // Sometime, the node will be clone with a v-show set to false (line 17)
+          clone.style.display = "flex";
           this.explorerContent.push(clone);
         }
       }
@@ -330,6 +326,7 @@ export default {
       this.$emit("update:content:effect", { mediaElements, medias });
     },
     changeIndex(index) {
+      if (this.isEditing) return;
       this.activeTransition =
         index > this.lightboxIndex ? "fadeLeft" : "fadeRight";
       this.lightboxIndex = index;
@@ -349,8 +346,8 @@ export default {
     },
     onMediaSelectionChange(isSelected, index) {
       if (isSelected) {
-        if (!this.content.isVisible) {
-          this.$emit("update:content:effect", { isVisible: true });
+        if (!this.isExplorerVisible) {
+          this.isExplorerVisible = true;
         }
 
         this.$emit("update:sidepanel-content", {
@@ -360,6 +357,7 @@ export default {
       }
     },
     onMouseDown(event) {
+      if (this.isEditing) return;
       const summary = this.$refs.lightboxSummary;
       if (!summary) return;
       this.isDrag = true;
@@ -367,9 +365,11 @@ export default {
       this.scrollLeft = summary.scrollLeft;
     },
     onMouseUp() {
+      if (this.isEditing) return;
       this.isDrag = false;
     },
     onMouseMove(event) {
+      if (this.isEditing) return;
       if (!this.isDrag) return;
       const summary = this.$refs.lightboxSummary;
       if (!summary) return;
@@ -379,6 +379,11 @@ export default {
       const walk = (x - this.startX) * 2;
       summary.scrollLeft = this.scrollLeft - walk;
     },
+    /* wwEditor:start */
+    toggleEdition() {
+      this.handlerExplorer(!this.isExplorerVisible);
+    },
+    /* wwEditor:false */
   },
 };
 </script>
@@ -405,14 +410,31 @@ export default {
     &-content {
       width: 100%;
     }
+
+    .content-container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .item-container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
   }
 
   &__content {
+    width: 100%;
     z-index: 101;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: stretch;
+    align-items: center;
     position: fixed;
     top: 0px;
     right: 0px;
@@ -420,6 +442,22 @@ export default {
     left: 0px;
 
     background-color: var(--backdrop-color);
+
+    .content-container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .item-container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
   }
 
   .explorer-nav {

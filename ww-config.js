@@ -68,16 +68,6 @@ export default {
         group: "Popup",
       },
     },
-    isVisible: {
-      type: "OnOff",
-      section: "settings",
-      label: {
-        en: "Show lightbox",
-        fr: "Show lightbox",
-      },
-      bindable: true,
-      defaultValue: false,
-    },
     mediaIndex: {
       hidden: (content) => content.medias.length <= 1,
       label: { en: "Selected media", fr: "Media selectionné" },
@@ -180,6 +170,17 @@ export default {
       },
       defaultValue: "",
       bindable: true,
+    },
+    toggleEdition: {
+      type: "Button",
+      label: null,
+      editorOnly: true,
+      options: {
+        text: {
+          en: "Toggle edition",
+        },
+        action: "toggleEdition",
+      },
     },
   },
 };
