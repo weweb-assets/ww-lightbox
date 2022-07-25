@@ -9,6 +9,17 @@ export default {
     },
   },
   properties: {
+    toggleEdition: {
+      type: "Button",
+      label: null,
+      editorOnly: true,
+      options: {
+        text: {
+          en: "Toggle edition",
+        },
+        action: "toggleEdition",
+      },
+    },
     triggerLink: {
       hidden: true,
       defaultValue: {
@@ -67,16 +78,6 @@ export default {
       navigator: {
         group: "Popup",
       },
-    },
-    isVisible: {
-      type: "OnOff",
-      section: "settings",
-      label: {
-        en: "Show lightbox",
-        fr: "Show lightbox",
-      },
-      bindable: true,
-      defaultValue: false,
     },
     mediaIndex: {
       hidden: (content) => content.medias.length <= 1,
