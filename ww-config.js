@@ -134,6 +134,13 @@ export default {
                   fr: "Miniature",
                 },
                 bindable: true,
+                /* wwEditor:start */
+                bindingValidation: {
+                  type: "string",
+                  tooltip:
+                    'A string that represents the image url: `"https://.../.../my_image.png"`',
+                },
+                /* wwEditor:end */
               },
             },
           },
@@ -160,6 +167,14 @@ export default {
       },
       defaultValue: "#000000",
       bindable: true,
+      /* wwEditor:start */
+      bindingValidation: {
+        cssSupports: "color",
+        type: "string",
+        tooltip:
+          'A string that represents a color code: `"rebeccapurple" | "#00ff00" | "rgb(214, 122, 127)"`',
+      },
+      /* wwEditor:end */
     },
     displayGroup: {
       type: "OnOff",
@@ -181,6 +196,12 @@ export default {
       },
       defaultValue: "",
       bindable: true,
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: 'A string that defines the group name: `"myGroup"`',
+      },
+      /* wwEditor:end */
     },
   },
 };
