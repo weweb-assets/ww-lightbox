@@ -3,9 +3,9 @@ export default {
     label: {
       en: "Lightbox",
     },
-    icon: "fontawesome/solid/film",
+    icon: "film",
     bubble: {
-      icon: "fontawesome/solid/film",
+      icon: "film",
     },
   },
   properties: {
