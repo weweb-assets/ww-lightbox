@@ -97,9 +97,19 @@ export default {
   setup(props) {
     const { id, groupMiniatures, linked } = useMiniatures(props);
 
+    /* wwEditor:start */
     const { cloneElement, createElement } = wwLib.useCreateElement();
+    /* wwEditor:end */
 
-    return { id, groupMiniatures, linked, cloneElement,  createElement };
+    return { 
+      id, 
+      groupMiniatures, 
+      linked, 
+      /* wwEditor:start */
+      cloneElement,  
+      createElement 
+      /* wwEditor:end */
+    };
   },
   data() {
     return {
