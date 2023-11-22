@@ -97,7 +97,19 @@ export default {
   setup(props) {
     const { id, groupMiniatures, linked } = useMiniatures(props);
 
-    return { id, groupMiniatures, linked };
+    /* wwEditor:start */
+    const { cloneElement, createElement } = wwLib.useCreateElement();
+    /* wwEditor:end */
+
+    return { 
+      id, 
+      groupMiniatures, 
+      linked, 
+      /* wwEditor:start */
+      cloneElement,  
+      createElement 
+      /* wwEditor:end */
+    };
   },
   data() {
     return {
@@ -137,13 +149,13 @@ export default {
           if (media && oldMedias[index]) {
             if (media.media !== oldMedias[index].media) {
               const mediaElements = [...this.content.mediaElements];
-              const elem = await wwLib.createElement(
+              const elem = await this.createElement(
                 media.media,
-                {},
                 {
-                  name: this.getElementName(media.media),
-                },
-                this.wwFrontState.sectionId
+                  _state: {
+                    name: this.getElementName(media.media),
+                  }
+                }
               );
               mediaElements[index] = elem;
               this.$emit("update:content:effect", { mediaElements });
@@ -298,19 +310,18 @@ export default {
 
       const mediaElements = [...this.content.mediaElements];
       if (mediaElements.length === 0) {
-        const elem = await wwLib.createElement(
+        const elem = await this.createElement(
           "ww-image",
-          {},
-          { name: "Media - Image" },
-          this.wwFrontState.sectionId
+          {
+            _state: { name: "Media - Image" }
+          }
         );
         mediaElements.push(elem);
       } else {
         const name = this.getElementName(medias[medias.length - 1].media);
-        const elem = await wwLib.wwObjectHelper.cloneElement(
+        const { elem } = await this.cloneElement(
           mediaElements[mediaElements.length - 1].uid,
-          this.wwFrontState.sectionId,
-          name
+          { name }
         );
         mediaElements.push(elem);
       }
